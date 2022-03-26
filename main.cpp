@@ -185,12 +185,28 @@ void decodeKey(string reverseKey[ALPHABETS]) {
 }
 
 int main() {
+
+  // MonoAlphabeticSubs tool;
+  // ifstream in("outputs/decipheredText.txt");
+  // string text;
+  // getline(in, text);
+  // string key;
+  // in.close();
+  // in.open("keys/key.txt");
+  // in >> key;
+  // tool.setKey(key);
+  // text = tool.encrypt(text);
+  // cout << text << endl;
+  // text = tool.decrypt(text);
+  // cout << text << endl;
+
+  // return 0;
   Attack hack;
   hack.insertFromFileIntoDictionary("dicts/engmix_edited.txt");
   string text = getText();
   hack.setCipherText(text);
 
-  cout << "Enter the maximum length you need for the most common substrings (0 "
+  cout << "Enter the maximum length you need for the most common substrings(0 "
        << "if not needed): " << flush;
   int maxLength;
   cin >> maxLength;
@@ -227,7 +243,7 @@ int main() {
   cout << "Enter type of output needed (1/2/3):\n\t1- Get every possible "
        << "output separated by words in outputs/output.txt, and sorted in "
        << "outputs/sortedOutput.txt\t\"he is clever ...\"\n\t2- Get only "
-       << "complete sentences if they may be correct (not separated by words) "
+       << "complete sentences if they may be correct (not separated by words)"
        << "in outputs/outputOnce.txt\t\"heisclever...\"\n\t3- Get only "
        << "complete sentences in outputs/outputMax.txt, but some letters "
        << "may be skipped\t\"he -- clever ...\"" << endl;
