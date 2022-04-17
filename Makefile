@@ -1,10 +1,14 @@
-SRCDIR = .
-BUILDDIR = ./build
-BINDIR = .
-TARGET = $(BINDIR)/main.exe
+empty :=
+space := $(empty) $(empty)
+
+SRCDIR := ./src
+HDRDIR := ./headers
+OBJDIR := ./build/obj
+DEPDIR := ./build/deps
+BINDIR := .
+TARGET := $(BINDIR)/$(subst $(space),_,$(shell basename "${PWD}")).exe
 
 ###### extra variables #######
-
 
 ###### complier set-up ######
 CC = gcc
@@ -15,53 +19,59 @@ LD = g++
 LDFLAGS = $(CXXFLAGS)
 DEBUGGER = gdb
 
-
-MKDIR = mkdir -p
-
 ifdef RELEASE
+	maketype := RELEASE
 	CFLAGS += -O3 -march=native
 	CXXFLAGS += -std=c++17
 	LDFLAGS += -flto=full
 else ifdef DEBUG
+	maketype := DEBUG
 	CFLAGS += -O0 -g
+else ifdef THREADS
+	maketype := THREADS
+	CFLAGS += -O2 -march=native -pthread
+	CXXFLAGS += -std=c++17
+	LDFLAGS += -flto=full
 else
+	maketype := NORMAL
 	CFLAGS += -O0
 	CXXFLAGS += -O0 -std=c++14
 endif
 
-OUTPUT_OPTION = -MMD -MP -o $(BUILDDIR)/$*.o  -MF $(BUILDDIR)/$*.d
+OUTPUT_OPTION = -I $(HDRDIR) -I $(SRCDIR) -I $(BINDIR) -MMD -MP
 
-CPPSRCS := $(wildcard $(SRCDIR)/**/*.cpp)
-CPPSRCS += $(wildcard $(SRCDIR)/*.cpp)
-DEPS = $(patsubst $(SRCDIR)/%.cpp,$(BUILDDIR)/%.d,$(CPPSRCS))
-OBJS = $(patsubst $(SRCDIR)/%.cpp,$(BUILDDIR)/%.o,$(CPPSRCS))
+SRCS := $(wildcard $(SRCDIR)/**/*.cpp)
+SRCS += $(wildcard $(SRCDIR)/*.cpp)
+SRCS += $(wildcard $(SRCDIR)/**/*.c)
+SRCS += $(wildcard $(SRCDIR)/*.c)
+DEPS := $(patsubst $(SRCDIR)/%,$(DEPDIR)/%.d,$(SRCS))
+OBJS := $(patsubst $(SRCDIR)/%,$(OBJDIR)/%.o,$(SRCS))
 
-
+.PHONY: all
 all : $(TARGET)
 
-build: $(TARGET)
-
-run : $(TARGET)
-	$(TARGET)
-
+.PHONY: init
+init :
+	-@rm -rf build $(wildcard *.exe)
+	@mkdir -p $(SRCDIR) $(HDRDIR)
+	-@for i in $(wildcard *.cpp) $(wildcard *.c) $(wildcard *.tpp); do mv ./$$i $(SRCDIR)/$$i; done
+	-@for i in $(wildcard *.h); do mv ./$$i $(HDRDIR)/$$i; done
+	-@mkdir -p $(OBJDIR) $(DEPDIR)
 
 $(TARGET): $(OBJS)
-	@if ! [ -d $(dir $@) ]; then  \
-	  echo MKDIR $(dir $@) && mkdir -p $(dir $@); \
-	fi;
-	-@echo LD $@ && $(LD) $(OBJS) -o $@
+	-@echo LD $(maketype) $< "->" $@ && $(LD) $(LDFLAGS) $(OBJS) -o $@
 
-$(BUILDDIR)/%.o: $(SRCDIR)/%.cpp
-	@if ! [ -d $(dir $@) ]; then  \
-	  echo MKDIR $(dir $@) && mkdir -p $(dir $@); \
-	fi;
-	-@echo CXX $@ && $(CXX) $(CXXFLAGS) -c $< $(OUTPUT_OPTION)
+$(OBJDIR)/%.cpp.o: $(SRCDIR)/%.cpp
+	@mkdir -p $(OBJDIR) $(DEPDIR)
+	-@echo CXX $(maketype) $< "->" $@ && \
+		$(CXX) $(CXXFLAGS) -c $< $(OUTPUT_OPTION) \
+		-o $@ -MF $(DEPDIR)/$(<F).d
 
-$(BUILDDIR)/%.o: $(SRCDIR)/%.c 
-	@if ! [ -d $(dir $@) ]; then  \
-	  echo MKDIR $(dir $@) && mkdir -p $(dir $@); \
-	fi;
-	-@echo CC $@ && $(CC) $(CFLAGS) -c $< $(OUTPUT_OPTION)
+$(OBJDIR)/%.c.o: $(SRCDIR)/%.c
+	@mkdir -p $(OBJDIR) $(DEPDIR)
+	-@echo CC $(maketype) $< "->" $@ && \
+		$(CC) $(CFLAGS) -c $< $(OUTPUT_OPTION) \
+		-o $@ -MF $(DEPDIR)/$(<F).d
 
 .PHONY: clean
 clean: 
@@ -70,3 +80,5 @@ clean:
 .PHONY: debug
 debug: $(TARGET)
 	$(DEBUGGER) $(TARGET)
+
+-include $(DEPS)
