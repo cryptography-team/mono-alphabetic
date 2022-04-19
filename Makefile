@@ -2,7 +2,7 @@ empty :=
 space := $(empty) $(empty)
 
 SRCDIR := ./src
-HDRDIR := ./headers
+INCDIR := ./include
 OBJDIR := ./build/obj
 DEPDIR := ./build/deps
 BINDIR := .
@@ -38,7 +38,7 @@ else
 	CXXFLAGS += -O0 -std=c++14
 endif
 
-OUTPUT_OPTION = -I $(HDRDIR) -I $(SRCDIR) -I $(BINDIR) -MMD -MP
+OUTPUT_OPTION = -I $(INCDIR) -I $(SRCDIR) -I $(BINDIR) -MMD -MP
 
 SRCS := $(wildcard $(SRCDIR)/**/*.cpp)
 SRCS += $(wildcard $(SRCDIR)/*.cpp)
@@ -53,22 +53,21 @@ all : $(TARGET)
 .PHONY: init
 init :
 	-@rm -rf build $(wildcard *.exe)
-	@mkdir -p $(SRCDIR) $(HDRDIR)
+	@mkdir -p $(SRCDIR) $(INCDIR) $(OBJDIR) $(DEPDIR)
 	-@for i in $(wildcard *.cpp) $(wildcard *.c) $(wildcard *.tpp); do mv ./$$i $(SRCDIR)/$$i; done
-	-@for i in $(wildcard *.h); do mv ./$$i $(HDRDIR)/$$i; done
-	-@mkdir -p $(OBJDIR) $(DEPDIR)
+	-@for i in $(wildcard *.h); do mv ./$$i $(INCDIR)/$$i; done
+	-@echo -e "-DDEBUG\n-I../$(BINDIR)\n-I../$(INCDIR)" >| src/.clang_complete
+	-@cp /home/ahmed/opt/compile_and_run.sh ./
 
 $(TARGET): $(OBJS)
-	-@echo LD $(maketype) $< "->" $@ && $(LD) $(LDFLAGS) $(OBJS) -o $@
+	-@echo LD $(maketype) "$(<D)/*.o" "->" $@ && $(LD) $(LDFLAGS) $(OBJS) -o $@
 
 $(OBJDIR)/%.cpp.o: $(SRCDIR)/%.cpp
-	@mkdir -p $(OBJDIR) $(DEPDIR)
 	-@echo CXX $(maketype) $< "->" $@ && \
 		$(CXX) $(CXXFLAGS) -c $< $(OUTPUT_OPTION) \
 		-o $@ -MF $(DEPDIR)/$(<F).d
 
 $(OBJDIR)/%.c.o: $(SRCDIR)/%.c
-	@mkdir -p $(OBJDIR) $(DEPDIR)
 	-@echo CC $(maketype) $< "->" $@ && \
 		$(CC) $(CFLAGS) -c $< $(OUTPUT_OPTION) \
 		-o $@ -MF $(DEPDIR)/$(<F).d
