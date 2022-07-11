@@ -1,4 +1,3 @@
 .clang_complete
 build
 *.exe
-*.sh
